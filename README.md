@@ -624,5 +624,6 @@ Copyright © 2026 Wedzy. All rights reserved.
 
 ---
 
-**Built with ❤️ for couples planning their perfect day**
+**Built with ❤️ for couples planning their perfect day**  
+*Built by Ajith Prasad, CipherKloud Technologies*  
 *Last updated: February 2026*
