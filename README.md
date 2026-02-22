@@ -467,6 +467,96 @@ Inspiration (userId, title, category, imageUrl, localImagePath, isFavorite, ...)
 - **Accessibility first** with proper contrast and sizing
 - **Dark/Light theme** support
 
+## 🏗️ Architecture & Design
+
+### High-Level Design (HLD)
+
+Wedzy follows a modern Android Architecture standard, separating the app into three primary layers: **UI Layer**, **Domain Layer**, and **Data Layer**. This ensures a unidirectional data flow and a scalable, testable codebase.
+
+```mermaid
+graph TD
+    subgraph UI Layer
+        UI[UI Elements / Compose]
+        VM[ViewModels / StateHolders]
+        UI <-->|Events / UI State| VM
+    end
+
+    subgraph Domain Layer
+        UC[Use Cases]
+        VM -->|Execute| UC
+    end
+
+    subgraph Data Layer
+        Repo[Repositories]
+        UC -->|Request Data| Repo
+        
+        subgraph Local Data
+            Room[(Room Database)]
+            DS[(DataStore Prefs)]
+        end
+        
+        subgraph Remote Data
+            Auth[Firebase Auth]
+        end
+        
+        Repo <-->|CRUD| Room
+        Repo <-->|Read/Write| DS
+        Repo <-->|Authenticate| Auth
+    end
+
+    %% Data Flow
+    Room -.->|Flow/LiveData| Repo
+    Repo -.->|Flow/Result| UC
+    UC -.->|Flow/Result| VM
+```
+
+#### Key Architecture Decisions:
+1. **Unidirectional Data Flow (UDF)**: The UI sends user events to the ViewModel, which updates the UI State. The UI only ever reads from this immutable state.
+2. **Single Source of Truth**: The local Room Database acts as the single source of truth for all wedding data (Tasks, Guests, Vendors).
+3. **Data Isolation**: Every entity in the database is tied to a specific `userId` derived from Firebase Auth, ensuring users never see each other's data, even on a shared device.
+
+---
+
+### Low-Level Design (LLD)
+
+#### 1. Directory Structure
+```text
+app/src/main/java/io/example/wedzy/
+├── data/                  # Data Layer
+│   ├── local/             # Room DB, DAOs, Migrations
+│   ├── model/             # Data Entities (Task, Guest, Vendor)
+│   ├── preferences/       # DataStore implementations
+│   └── repository/        # Repository implementations
+├── di/                    # Dependency Injection (Hilt Modules)
+├── ui/                    # UI Layer (Features)
+│   ├── auth/              # Login, Registration, Google Sign-In
+│   ├── home/              # Dashboard, Countdowns
+│   ├── tasks/             # Checklist management
+│   ├── budget/            # Expense tracking
+│   ├── guests/            # RSVP, Table assignments
+│   ├── vendors/           # Vendor tracking
+│   ├── navigation/        # Compose Navigation Graph
+│   └── theme/             # Material 3 Colors, Typography, Shapes
+└── utils/                 # Extensions, Formatters, Constants
+```
+
+#### 2. Design Patterns Used
+*   **Observer Pattern**: Used heavily via Kotlin `Flow` and `StateFlow` to observe database changes and update the UI reactively.
+*   **Repository Pattern**: Abstracts the data sources (Room vs. Firebase vs. DataStore) from the ViewModels.
+*   **Dependency Injection**: Handled via **Hilt** to provide singletons (Database, Repositories) and inject them into ViewModels and UI components without manual lifecycle management.
+*   **Builder Pattern**: Used in the UI layer for constructing complex dialogs, bottom sheets, and Google Sign-in requests (`GetGoogleIdOption.Builder`).
+
+#### 3. Data Flow Example: Adding a Task
+1.  **UI Event**: User clicks "Save" on `AddTaskScreen`.
+2.  **ViewModel**: `TasksViewModel.addTask(title, date)` is called.
+3.  **Data mapping**: ViewModel constructs a `Task` object, fetching the current `userId` from the `UserSession`.
+4.  **Repository**: ViewModel calls `TaskRepository.insertTask(task)`.
+5.  **DAO**: Repository delegates to `TaskDao.insert(task)`.
+6.  **Database**: Room persists the data to SQLite.
+7.  **Reactivity**: `TaskDao.getAllTasks(userId)` emits a new `Flow` list. The ViewModel's `StateFlow` updates, and the Compose UI automatically recomposes to show the new task.
+
+---
+
 ## 🔧 Development Guidelines
 
 ### Code Architecture
