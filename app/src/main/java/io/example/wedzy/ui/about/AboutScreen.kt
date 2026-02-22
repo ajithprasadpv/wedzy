@@ -91,6 +91,14 @@ fun AboutScreen(
                 )
             }
             
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Built by Ajith Prasad, CipherKloud Technologies",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
